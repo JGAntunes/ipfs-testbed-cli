@@ -1,6 +1,6 @@
 {
   "name": "ipfs-testbed",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "IPFS Testbed CLI tool",
   "bin": {
     "ipt": "src/bin.js"

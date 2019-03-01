@@ -1,9 +1,0 @@
----
-esJavaOpts: "-Xmx1g -Xms1g"
-resources:
-  requests:
-    memory: 1Gi
-    cpu: 100m
-  limits:
-    memory: 2Gi
-    cpu: 500m

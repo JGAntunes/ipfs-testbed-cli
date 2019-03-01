@@ -1,8 +1,0 @@
----
-resources:
-  requests:
-    memory: 200Mi
-    cpu: 100m
-  limits:
-    memory: 500Mi
-    cpu: 200m

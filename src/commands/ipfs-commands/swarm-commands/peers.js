@@ -3,11 +3,11 @@
 
 const ipfsClient = require('ipfs-http-client')
 
-const { getRandomElement } = require('../../lib/utils')
-const k8sClient = require('../../lib/kubernetes-client')
+const { getRandomElement } = require('../../../lib/utils')
+const k8sClient = require('../../../lib/kubernetes-client')
 
 const cmd = {
-  command: 'swarm peers [node-id]',
+  command: 'peers [node-id]',
   desc: 'execute a get swarm peers from [node-id] or a random node',
   builder: (yargs) => {
     yargs.positional('node-id', {

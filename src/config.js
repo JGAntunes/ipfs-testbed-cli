@@ -1,6 +1,10 @@
 'use strict'
 
 module.exports = {
+  setup: {
+    idParallelLimit: process.env.SETUP_ID_PARALLEL_LIMIT || 5,
+    connParallelLimit: process.env.SETUP_CONN_PARALLEL_LIMIT || 5
+  },
   kubernetes: {
     namespace: process.env.KUBERNETES_NAMESPACE || 'default',
     labelSelector: process.env.KUBERNETES_LABEL || 'app=ipfs-testbed',

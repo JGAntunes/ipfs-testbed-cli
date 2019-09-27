@@ -6,8 +6,8 @@ const { getRandomElement } = require('../../../lib/utils')
 const toxiproxyClient = require('../../../lib/toxiproxy-client')
 
 const cmd = {
-  command: 'latency [node-id]',
-  desc: 'add latency toxic to [node-id] (or a random node) incoming conns',
+  command: 'latency [peer-id]',
+  desc: 'add latency toxic to [peer-id] (or a random peer) incoming conns',
   builder: (yargs) => {
     yargs.options('latency', {
       describe: 'latency (in ms) to inject',
@@ -23,8 +23,8 @@ const cmd = {
       default: 'downstream'
     })
   },
-  handler: async ({ nodeId, latency, jitter, stream }) => {
-    const res = await k8sClient.getNodeInfo({ nodeId: nodeId })
+  handler: async ({ peerId, latency, jitter, stream }) => {
+    const res = await k8sClient.getNodeInfo({ peerId })
     const node = getRandomElement(res)
     if (!node) return
     const payload = {

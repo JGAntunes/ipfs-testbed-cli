@@ -6,19 +6,19 @@ const { getRandomElement } = require('../../../lib/utils')
 const toxiproxyClient = require('../../lib/toxiproxy-client')
 
 const cmd = {
-  command: ['toxics <toxic> [node-id]', 'toxic <toxic> [node-id]'],
-  desc: 'deletes a toxic from [node-id] (or a random node)',
+  command: ['toxics <toxic> [peer-id]', 'toxic <toxic> [peer-id]'],
+  desc: 'deletes a toxic from [peer-id] (or a random peer)',
   builder: (yargs) => {
     yargs.positional('toxic', {
       describe: 'specific toxic to delete',
       type: 'string'
-    }).positional('node-id', {
-      describe: 'node to delete the resource from',
+    }).positional('peer-id', {
+      describe: 'peer to delete the resource from',
       type: 'string'
     })
   },
-  handler: async ({ nodeId, toxic }) => {
-    const res = await k8sClient.getNodeInfo({ nodeId: nodeId })
+  handler: async ({ peerId, toxic }) => {
+    const res = await k8sClient.getNodeInfo({ peerId })
     const node = getRandomElement(res)
     if (!node) return
     const toxics = await toxiproxyClient.deleteToxic(node.hosts.toxiproxyAPI, toxic)

@@ -7,16 +7,16 @@ const { getRandomElement } = require('../../lib/utils')
 const k8sClient = require('../../lib/kubernetes-client')
 
 const cmd = {
-  command: 'swarm peers [node-id]',
-  desc: 'execute a get swarm peers from [node-id] or a random node',
+  command: 'swarm peers [peer-id]',
+  desc: 'execute a get swarm peers from [peer-id] or a random peer',
   builder: (yargs) => {
-    yargs.positional('node-id', {
-      describe: 'node to execute the command at',
+    yargs.positional('peer-id', {
+      describe: 'peer to execute the command at',
       type: 'string'
     })
   },
-  handler: async ({ nodeId }) => {
-    const res = await k8sClient.getNodeInfo({ nodeId })
+  handler: async ({ peerId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)

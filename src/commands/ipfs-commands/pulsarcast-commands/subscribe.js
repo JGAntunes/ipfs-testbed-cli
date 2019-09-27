@@ -6,19 +6,19 @@ const { getRandomElement } = require('../../../lib/utils')
 const ipfsClient = require('ipfs-http-client')
 
 const cmd = {
-  command: 'subscribe <topic-cid> [node-id]',
-  desc: 'subscribe to <topic-cid> from [node-id] or a random node',
+  command: 'subscribe <topic-cid> [peer-id]',
+  desc: 'subscribe to <topic-cid> from [peer-id] or a random peer',
   builder: (yargs) => {
     yargs.positional('topic-cid', {
       describe: 'topic cid',
       type: 'string'
-    }).positional('node-id', {
-      describe: 'node to execute the command at',
+    }).positional('peer-id', {
+      describe: 'peer to execute the command at',
       type: 'string'
     })
   },
-  handler: async ({ topicCid, nodeId }) => {
-    const res = await k8sClient.getNodeInfo({ nodeId })
+  handler: async ({ topicCid, peerId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)

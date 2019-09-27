@@ -4,15 +4,15 @@
 const k8sClient = require('../../lib/kubernetes-client')
 
 const cmd = {
-  command: ['nodes [node-id]', 'node [node-id]'],
+  command: ['nodes [peer-id]', 'node [peer-id]'],
   desc: 'get node info',
   builder: {
-    'node-id': {
-      alias: 'nodeId'
+    'peer-id': {
+      alias: 'peerId'
     }
   },
   handler: async (argv) => {
-    const res = await k8sClient.getNodeInfo({ nodeId: argv.nodeId })
+    const res = await k8sClient.getNodeInfo({ peerId: argv.peerId })
     console.log(JSON.stringify(res, null, 2))
   }
 }

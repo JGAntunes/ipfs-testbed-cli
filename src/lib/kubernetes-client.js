@@ -35,14 +35,15 @@ async function getDeployments ({ namespace, labelSelector }) {
   return res.body
 }
 
-async function getNodeInfo ({ namespace = 'ipfs-testbed', labelSelector = 'app.kubernetes.io/name=ipfs-testbed', nodeId } = {}) {
-  if (nodeId) labelSelector = `${labelSelector},ipfs-testbed/ipfs-id=${nodeId}`
+async function getNodeInfo ({ namespace = 'ipfs-testbed', labelSelector = 'app.kubernetes.io/name=ipfs-testbed', id, peerId } = {}) {
+  if (peerId) labelSelector = `${labelSelector},ipfs-testbed/ipfs-id=${peerId}`
+  if (id) labelSelector = `${labelSelector},app.kubernetes.io/instance=${id}`
   const [nodes, services, deployments] = await Promise.all([
     getNodes(),
     getServices({ namespace, labelSelector }),
     getDeployments({ namespace, labelSelector })
   ])
-  // Using the first node for now
+  // TODO Using the first node for now
   const addresses = nodes.items[0].status.addresses
   // Look for an ExternalIP, else look for a Hostname, else look for an InternalIP
   let ad = addresses.find((address) => address.type === 'ExternalIP')
@@ -56,9 +57,11 @@ async function getNodeInfo ({ namespace = 'ipfs-testbed', labelSelector = 'app.k
       toxiproxyAPI: service.spec.ports.find(port => port.name === config.toxiproxyPortName)
     }
     return {
-      // Name and id will be the same across all resources
-      id: service.metadata.labels['ipfs-testbed/ipfs-id'],
-      // Name will be the same across all resources
+      // node-{number}
+      id: service.metadata.labels['app.kubernetes.io/instance'],
+      // The IPFS id
+      peerId: service.metadata.labels['ipfs-testbed/ipfs-id'],
+      // node-{number}-ipfs-testbed
       name: service.metadata.name,
       hosts: {
         swarm: {

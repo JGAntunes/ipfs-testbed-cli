@@ -18,10 +18,13 @@ const cmd = {
     }).positional('peer-id', {
       describe: 'peer to execute the command at',
       type: 'string'
+    }).options('node-id', {
+      describe: 'ipfs node to execute the command at',
+      type: 'string'
     })
   },
-  handler: async ({ topicCid, message, peerId }) => {
-    const res = await k8sClient.getNodeInfo({ peerId })
+  handler: async ({ topicCid, message, peerId, nodeId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId, id: nodeId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)

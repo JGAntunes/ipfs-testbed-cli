@@ -9,6 +9,7 @@ kc.loadFromDefault()
 
 const k8sApiCore = kc.makeApiClient(k8s.Core_v1Api)
 const k8sApiApps = kc.makeApiClient(k8s.Apps_v1Api)
+const k8sExtensions = kc.makeApiClient(k8s.Extensions_v1beta1Api)
 
 function handleErrorCode (res) {
   const statusCode = res.response.statusCode
@@ -29,6 +30,12 @@ async function getServices ({ namespace, labelSelector }) {
   return res.body
 }
 
+async function getIngresses ({ namespace, labelSelector }) {
+  const res = await k8sExtensions.listNamespacedIngress(namespace, null, null, null, null, labelSelector)
+  handleErrorCode(res)
+  return res.body
+}
+
 async function getDeployments ({ namespace, labelSelector }) {
   const res = await k8sApiApps.listNamespacedDeployment(namespace, null, null, null, null, labelSelector)
   handleErrorCode(res)
@@ -38,23 +45,46 @@ async function getDeployments ({ namespace, labelSelector }) {
 async function getNodeInfo ({ namespace = 'ipfs-testbed', labelSelector = 'app.kubernetes.io/name=ipfs-testbed', id, peerId } = {}) {
   if (peerId) labelSelector = `${labelSelector},ipfs-testbed/ipfs-id=${peerId}`
   if (id) labelSelector = `${labelSelector},app.kubernetes.io/instance=${id}`
-  const [nodes, services, deployments] = await Promise.all([
+  const [nodes, servicesReply, ingressesReply] = await Promise.all([
     getNodes(),
     getServices({ namespace, labelSelector }),
+    getIngresses({ namespace, labelSelector }),
     getDeployments({ namespace, labelSelector })
   ])
-  // TODO Using the first node for now
-  const addresses = nodes.items[0].status.addresses
-  // Look for an ExternalIP, else look for a Hostname, else look for an InternalIP
-  let ad = addresses.find((address) => address.type === 'ExternalIP')
-  if (!ad) ad = addresses.find((address) => address.type === 'Hostname')
-  if (!ad) ad = addresses.find((address) => address.type === 'InternalIP')
-  // Get the ports for each service
-  return services.items.map(service => {
-    const ports = {
-      swarm: service.spec.ports.find(port => port.name === config.swarmPortName),
-      ipfsAPI: service.spec.ports.find(port => port.name === config.ipfsPortName),
-      toxiproxyAPI: service.spec.ports.find(port => port.name === config.toxiproxyPortName)
+
+  const services = servicesReply.items
+  const ingresses = ingressesReply.items
+
+  const k8sInfo = {}
+  services.forEach(service => {
+    k8sInfo[service.metadata.name] = { service, ...k8sInfo[service.metadata.name] }
+  })
+  ingresses.forEach(ingress => {
+    k8sInfo[ingress.metadata.name] = { ingress, ...k8sInfo[ingress.metadata.name] }
+  })
+
+  return Object.values(k8sInfo).map(({ ingress, service }) => {
+    const ipfsAPI = {}
+    const toxiproxyAPI = {}
+    // Do we have ingresses
+    if (ingress) {
+      ipfsAPI.host = ingress.spec.rules.find(rule => rule.http.paths[0].backend.servicePort === config.ipfsPortName).host
+      // IPFS http api client sets a default port...
+      ipfsAPI.port = 80
+      toxiproxyAPI.host = ingress.spec.rules.find(rule => rule.http.paths[0].backend.servicePort === config.toxiproxyPortName).host
+      // We're using NodePort services
+    } else {
+      // TODO Using the first node for now
+      const addresses = nodes.items[0].status.addresses
+      // Look for an ExternalIP, else look for a Hostname, else look for an InternalIP
+      let ad = addresses.find((address) => address.type === 'ExternalIP')
+      if (!ad) ad = addresses.find((address) => address.type === 'Hostname')
+      if (!ad) ad = addresses.find((address) => address.type === 'InternalIP')
+      toxiproxyAPI.host = ipfsAPI.host = ad.address
+
+      // Get ports for each service
+      ipfsAPI.port = service.spec.ports.find(port => port.name === config.ipfsPortName).nodePort
+      toxiproxyAPI.port = service.spec.ports.find(port => port.name === config.toxiproxyPortName).nodePort
     }
     return {
       // node-{number}
@@ -64,18 +94,8 @@ async function getNodeInfo ({ namespace = 'ipfs-testbed', labelSelector = 'app.k
       // node-{number}-ipfs-testbed
       name: service.metadata.name,
       hosts: {
-        swarm: {
-          host: ad.address,
-          port: ports.swarm.nodePort
-        },
-        ipfsAPI: {
-          host: ad.address,
-          port: ports.ipfsAPI.nodePort
-        },
-        toxiproxyAPI: {
-          host: ad.address,
-          port: ports.toxiproxyAPI.nodePort
-        }
+        ipfsAPI,
+        toxiproxyAPI
       }
     }
   })

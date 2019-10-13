@@ -11,12 +11,15 @@ const cmd = {
   desc: 'execute a get swarm peers from [peer-id] or a random peer',
   builder: (yargs) => {
     yargs.positional('peer-id', {
-      describe: 'peer to execute the command at',
+      describe: 'ipfs node to execute the command at',
+      type: 'string'
+    }).options('node-id', {
+      describe: 'ipfs node to execute the command at',
       type: 'string'
     })
   },
-  handler: async ({ peerId }) => {
-    const res = await k8sClient.getNodeInfo({ peerId })
+  handler: async ({ peerId, nodeId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId, id: nodeId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)

@@ -15,17 +15,20 @@ const cmd = {
       describe: 'peer to ping',
       type: 'string'
     }).positional('from-peer-id', {
-      describe: 'peer to execute the command at',
+      describe: 'ipfs node to execute the command at',
       type: 'string'
     }).options('count', {
       describe: 'packet count to send',
       alias: 'n',
       type: 'number',
       default: 10
+    }).options('node-id', {
+      describe: 'ipfs node to execute the command at',
+      type: 'string'
     })
   },
-  handler: async ({ fromPeerdId, toPeerId, count }) => {
-    const res = await k8sClient.getNodeInfo({ nodeId: fromPeerdId })
+  handler: async ({ fromPeerdId, toPeerId, count, nodeId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId: fromPeerdId, id: nodeId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)

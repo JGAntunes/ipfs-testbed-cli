@@ -24,6 +24,8 @@ const cmd = {
     })
     // Topics index for name -> cid
     const topics = {}
+    // Events array
+    const eventsBuffer = []
     for await (const line of rl) {
       let command
       try {
@@ -33,7 +35,7 @@ const cmd = {
         continue
       }
       // TODO NEXT
-      const res = await k8sClient.getNodeInfo({ command })
+      const res = await k8sClient.getNodeInfo({ id: command.node })
       const node = getRandomElement(res)
       const ipfs = ipfsClient(node.hosts.ipfsAPI)
       switch (command.type) {
@@ -43,16 +45,34 @@ const cmd = {
           console.log(`Created topic ${topic.name} with cid ${topic.cid}`)
           break
         case ('user'):
-          for await (const event of command.events) {
-            const topicCid = topics[event.topic]
+          // Store events for later
+          eventsBuffer.push({ id: command.node, events: command.events })
+          // Subscribe to topics
+          for await (const topic of Object.keys(command.subscriptions)) {
+            const topicCid = topics[topic]
             if (!topicCid) {
-              console.error(new Error(`Cannot find topic ${event.topic} CID`))
+              console.error(new Error(`Cannot find topic ${topic} CID`))
               continue
             }
-            await ipfs.pulsarcast.publish(topicCid, Buffer.from(JSON.stringify(event)))
-            console.log(`Sent event to topic ${event.topic} from node ${command.node}`)
+            await ipfs.pulsarcast.subscribe(topicCid)
+            console.log(`Node ${command.node} subscribed to ${topicCid} - ${topic}`)
           }
           break
+      }
+    }
+    // Publish events
+    for await (const { id, events } of eventsBuffer) {
+      const res = await k8sClient.getNodeInfo({ id })
+      const node = getRandomElement(res)
+      const ipfs = ipfsClient(node.hosts.ipfsAPI)
+      for await (const event of events) {
+        const topicCid = topics[event.topic]
+        if (!topicCid) {
+          console.error(new Error(`Cannot find topic ${event.topic} CID`))
+          continue
+        }
+        await ipfs.pulsarcast.publish(topicCid, Buffer.from(JSON.stringify(event)))
+        console.log(`Sent event to topic ${event.topic} from node ${id}`)
       }
     }
     // if (!node) return

@@ -4,7 +4,7 @@
 const readline = require('readline')
 const fs = require('fs')
 const k8sClient = require('../../../lib/kubernetes-client')
-const { getRandomElement } = require('../../../lib/utils')
+const { getRandomElement, asyncRetry } = require('../../../lib/utils')
 const ipfsClient = require('ipfs-http-client')
 
 const cmd = {
@@ -35,12 +35,12 @@ const cmd = {
         continue
       }
       // TODO NEXT
-      const res = await k8sClient.getNodeInfo({ id: command.node })
+      const res = await asyncRetry(5, k8sClient.getNodeInfo, { id: command.node })
       const node = getRandomElement(res)
       const ipfs = ipfsClient(node.hosts.ipfsAPI)
       switch (command.type) {
         case ('topic'):
-          const topic = await ipfs.pulsarcast.createTopic(command.name)
+          const topic = await asyncRetry(5, ipfs.pulsarcast.createTopic, command.name)
           topics[topic.name] = topic.cid
           console.log(`Created topic ${topic.name} with cid ${topic.cid}`)
           break
@@ -54,7 +54,7 @@ const cmd = {
               console.error(new Error(`Cannot find topic ${topic} CID`))
               continue
             }
-            await ipfs.pulsarcast.subscribe(topicCid)
+            await asyncRetry(5, ipfs.pulsarcast.subscribe, topicCid)
             console.log(`Node ${command.node} subscribed to ${topicCid} - ${topic}`)
           }
           break
@@ -62,7 +62,7 @@ const cmd = {
     }
     // Publish events
     for await (const { id, events } of eventsBuffer) {
-      const res = await k8sClient.getNodeInfo({ id })
+      const res = await asyncRetry(5, k8sClient.getNodeInfo, { id })
       const node = getRandomElement(res)
       const ipfs = ipfsClient(node.hosts.ipfsAPI)
       for await (const event of events) {
@@ -71,8 +71,12 @@ const cmd = {
           console.error(new Error(`Cannot find topic ${event.topic} CID`))
           continue
         }
-        await ipfs.pulsarcast.publish(topicCid, Buffer.from(JSON.stringify(event)))
-        console.log(`Sent event to topic ${event.topic} from node ${id}`)
+        try {
+          await asyncRetry(5, ipfs.pulsarcast.publish, topicCid, Buffer.from(JSON.stringify(event)))
+          console.log(`Sent event to topic ${event.topic} from node ${id}`)
+        } catch (e) {
+          console.log(`Failed to publish event ${event.topic} from node ${id}`)
+        }
       }
     }
     // if (!node) return

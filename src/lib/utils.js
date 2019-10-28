@@ -7,6 +7,21 @@ function getRandomElement (array) {
   return array[index]
 }
 
+async function asyncRetry (max, func, ...args) {
+  const retryFunc = async (num) => {
+    try {
+      return await func(...args)
+    } catch (e) {
+      console.log(e)
+      console.log(`Retry ${num} of ${max}`)
+      if (num >= max) throw e
+    }
+    return retryFunc(num++)
+  }
+  return retryFunc(1)
+}
+
 module.exports = {
-  getRandomElement
+  getRandomElement,
+  asyncRetry
 }

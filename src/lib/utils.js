@@ -8,17 +8,17 @@ function getRandomElement (array) {
 }
 
 async function asyncRetry (max, func, ...args) {
-  const retryFunc = async (num) => {
+  let error
+  for (let i = 1; i <= max; i++) {
     try {
       return await func(...args)
     } catch (e) {
       console.log(e)
-      console.log(`Retry ${num} of ${max}`)
-      if (num >= max) throw e
+      console.log(`Retry ${i} of ${max}`)
+      error = e
     }
-    return retryFunc(num++)
   }
-  return retryFunc(1)
+  throw error
 }
 
 module.exports = {

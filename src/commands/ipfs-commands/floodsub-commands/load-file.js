@@ -25,8 +25,6 @@ const cmd = {
       input: commandStream,
       crlfDelay: Infinity
     })
-    // Topics index for name -> cid
-    const topicNamesToCID = {}
     // Events array
     const eventsBuffer = []
 
@@ -57,13 +55,12 @@ const cmd = {
       const node = getRandomElement(res)
       const ipfs = ipfsClient(node.hosts.ipfsAPI)
       switch (command.type) {
-        case ('topic'):
-          const topic = await asyncRetry(5, ipfs.pulsarcast.createTopic, command.name)
-          topicNamesToCID[topic.name] = topic.cid
-          console.log(`Created topic ${topic.name} with cid ${topic.cid}`)
-          // topicNamesToCID[command.name] = command.name
-          // console.log(`Created topic ${command.name}`)
-          break
+        // case ('topic'):
+        //   await asyncRetry(5, ipfs.pulsarcast.createTopic, command.name)
+        //   console.log(`Created topic ${command.name}`)
+        //   // topicNamesToCID[command.name] = command.name
+        //   // console.log(`Created topic ${command.name}`)
+        //   break
         case ('user'):
           // Store events for later
           eventsBuffer.push({ id: command.node, events: command.events })
@@ -71,14 +68,8 @@ const cmd = {
           const topics = Object.keys(command.subscriptions)
 
           const subscribe = async (topic) => {
-            const topicCid = topicNamesToCID[topic]
-            if (!topicCid) {
-              // Topic might be in creation process, retry
-              console.error(new Error(`Cannot find topic ${topic} CID, trigger retry`))
-              return handleCommand(line)
-            }
-            await asyncRetry(5, ipfs.pulsarcast.subscribe, topicCid)
-            console.log(`Node ${command.node} subscribed to ${topicCid} - ${topic}`)
+            await asyncRetry(5, ipfs.pubsub.subscribe, topic)
+            console.log(`Node ${command.node} subscribed to ${topic}`)
           }
 
           for (let i = 0; i < topics.length; i += MAX_PARALLEL_REQUESTS) {
@@ -98,13 +89,8 @@ const cmd = {
         const node = getRandomElement(res)
         const ipfs = ipfsClient(node.hosts.ipfsAPI)
         for await (const event of events) {
-          const topicCid = topicNamesToCID[event.topic]
-          if (!topicCid) {
-            console.error(new Error(`Cannot find topic ${event.topic} CID`))
-            continue
-          }
           try {
-            await asyncRetry(5, ipfs.pulsarcast.publish, topicCid, Buffer.from(JSON.stringify(event)))
+            await asyncRetry(5, ipfs.pubsub.publish, event.topic, Buffer.from(JSON.stringify(event)))
             console.log(`Sent event to topic ${event.topic} from node ${id}`)
           } catch (e) {
             console.log(`Failed to publish event ${event.topic} from node ${id}`)
@@ -117,7 +103,6 @@ const cmd = {
         console.log(`Publishing ${i} to ${i + MAX_PARALLEL_REQUESTS}  from ${eventsBuffer.length} batches`)
         const publishBuffer = eventsBuffer.slice(i, i + MAX_PARALLEL_REQUESTS).map(publish)
         await delay(Promise.all(publishBuffer), 10)
-        // await Promise.all(publishBuffer)
       }
     }
     // if (!node) return

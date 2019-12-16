@@ -35,8 +35,29 @@ function delay (val, t) {
   })
 }
 
+// Based on https://bost.ocks.org/mike/shuffle/
+function shuffle (array) {
+  let m = array.length
+  let t = 0
+  let i = 0
+
+  // While there remain elements to shuffle…
+  while (m) {
+    // Pick a remaining element…
+    i = Math.floor(Math.random() * m--)
+
+    // And swap it with the current element.
+    t = array[m]
+    array[m] = array[i]
+    array[i] = t
+  }
+
+  return array
+}
+
 module.exports = {
   getRandomElement,
   asyncRetry,
-  delay
+  delay,
+  shuffle
 }

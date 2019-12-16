@@ -4,7 +4,7 @@
 const readline = require('readline')
 const fs = require('fs')
 const k8sClient = require('../../../lib/kubernetes-client')
-const { getRandomElement, asyncRetry, delay } = require('../../../lib/utils')
+const { getRandomElement, asyncRetry, delay, shuffle } = require('../../../lib/utils')
 const ipfsClient = require('ipfs-http-client')
 
 const MAX_PARALLEL_REQUESTS = 5
@@ -17,9 +17,13 @@ const cmd = {
     yargs.positional('file', {
       describe: 'file path containing line separated JSON commands',
       type: 'string'
+    }).options('all-allowed-to-publish', {
+      describe: 'set allAllowedToPublish option to true in the topics created',
+      type: 'boolean',
+      default: false
     })
   },
-  handler: async ({ file }) => {
+  handler: async ({ file, allAllowedToPublish }) => {
     const commandStream = file ? fs.createReadStream(file) : process.stdin
     const rl = readline.createInterface({
       input: commandStream,
@@ -58,7 +62,7 @@ const cmd = {
       const ipfs = ipfsClient(node.hosts.ipfsAPI)
       switch (command.type) {
         case ('topic'):
-          const topic = await asyncRetry(5, ipfs.pulsarcast.createTopic, command.name)
+          const topic = await asyncRetry(5, ipfs.pulsarcast.createTopic, command.name, { allAllowedToPublish })
           topicNamesToCID[topic.name] = topic.cid
           console.log(`Created topic ${topic.name} with cid ${topic.cid}`)
           // topicNamesToCID[command.name] = command.name
@@ -120,32 +124,7 @@ const cmd = {
         // await Promise.all(publishBuffer)
       }
     }
-    // if (!node) return
-    // const ipfs = ipfsClient(node.hosts.ipfsAPI)
-    // const response = await ipfs.pulsarcast.createTopic(topicName)
-    // console.log({ name: node.name, id: node.id })
-    // console.log(response)
   }
-}
-
-// Based on https://bost.ocks.org/mike/shuffle/
-function shuffle (array) {
-  let m = array.length
-  let t = 0
-  let i = 0
-
-  // While there remain elements to shuffle…
-  while (m) {
-    // Pick a remaining element…
-    i = Math.floor(Math.random() * m--)
-
-    // And swap it with the current element.
-    t = array[m]
-    array[m] = array[i]
-    array[i] = t
-  }
-
-  return array
 }
 
 module.exports = cmd

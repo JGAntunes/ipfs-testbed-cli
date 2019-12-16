@@ -15,17 +15,21 @@ const cmd = {
     }).positional('peer-id', {
       describe: 'peer to execute the command at',
       type: 'string'
+    }).options('all-allowed-to-publish', {
+      describe: 'set allAllowedToPublish option to true',
+      type: 'boolean',
+      default: false
     }).options('node-id', {
       describe: 'ipfs node to execute the command at',
       type: 'string'
     })
   },
-  handler: async ({ topicName, peerId, nodeId }) => {
+  handler: async ({ topicName, peerId, allAllowedToPublish, nodeId }) => {
     const res = await k8sClient.getNodeInfo({ peerId, id: nodeId })
     const node = getRandomElement(res)
     if (!node) return
     const ipfs = ipfsClient(node.hosts.ipfsAPI)
-    const response = await ipfs.pulsarcast.createTopic(topicName)
+    const response = await ipfs.pulsarcast.createTopic(topicName, { allAllowedToPublish })
     console.log({ name: node.name, id: node.id })
     console.log(response)
   }

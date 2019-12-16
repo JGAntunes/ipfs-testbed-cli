@@ -4,7 +4,7 @@
 const readline = require('readline')
 const fs = require('fs')
 const k8sClient = require('../../../lib/kubernetes-client')
-const { getRandomElement, asyncRetry, delay } = require('../../../lib/utils')
+const { getRandomElement, asyncRetry, delay, shuffle } = require('../../../lib/utils')
 const ipfsClient = require('ipfs-http-client')
 
 const MAX_PARALLEL_REQUESTS = 5
@@ -111,26 +111,6 @@ const cmd = {
     // console.log({ name: node.name, id: node.id })
     // console.log(response)
   }
-}
-
-// Based on https://bost.ocks.org/mike/shuffle/
-function shuffle (array) {
-  let m = array.length
-  let t = 0
-  let i = 0
-
-  // While there remain elements to shuffle…
-  while (m) {
-    // Pick a remaining element…
-    i = Math.floor(Math.random() * m--)
-
-    // And swap it with the current element.
-    t = array[m]
-    array[m] = array[i]
-    array[i] = t
-  }
-
-  return array
 }
 
 module.exports = cmd

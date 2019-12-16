@@ -2,7 +2,7 @@
 'use strict'
 
 const k8sClient = require('../../lib/kubernetes-client')
-const { getRandomElement } = require('../../../lib/utils')
+const { getRandomElement } = require('../../lib/utils')
 const toxiproxyClient = require('../../lib/toxiproxy-client')
 
 const cmd = {
@@ -15,10 +15,13 @@ const cmd = {
     }).positional('peer-id', {
       describe: 'peer to delete the resource from',
       type: 'string'
+    }).options('node-id', {
+      describe: 'ipfs node to execute the command at',
+      type: 'string'
     })
   },
-  handler: async ({ peerId, toxic }) => {
-    const res = await k8sClient.getNodeInfo({ peerId })
+  handler: async ({ peerId, toxic, nodeId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId, id: nodeId })
     const node = getRandomElement(res)
     if (!node) return
     const toxics = await toxiproxyClient.deleteToxic(node.hosts.toxiproxyAPI, toxic)

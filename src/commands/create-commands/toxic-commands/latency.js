@@ -2,7 +2,7 @@
 'use strict'
 
 const k8sClient = require('../../../lib/kubernetes-client')
-const { getRandomElement } = require('../../../lib/utils')
+const { getRandomElement, shuffle } = require('../../../lib/utils')
 const toxiproxyClient = require('../../../lib/toxiproxy-client')
 
 const cmd = {
@@ -17,27 +17,47 @@ const cmd = {
       describe: 'delay to +/- latencey (in ms)',
       type: 'number',
       default: 50
+    }).options('toxicity', {
+      describe: 'probability of toxic being applied',
+      type: 'number',
+      default: 1
     }).options('stream', {
       describe: 'inject toxic upstream or downstream',
       type: 'string',
       default: 'downstream'
+    }).options('bulk', {
+      describe: 'bulk percentage of nodes to add latency to, randomly',
+      type: 'number'
+    }).options('node-id', {
+      describe: 'ipfs node to execute the command at',
+      type: 'string'
     })
   },
-  handler: async ({ peerId, latency, jitter, stream }) => {
-    const res = await k8sClient.getNodeInfo({ peerId })
-    const node = getRandomElement(res)
-    if (!node) return
-    const payload = {
-      type: 'latency',
-      stream,
-      attributes: {
-        latency,
-        jitter
-      }
+  handler: async ({ peerId, latency, toxicity, jitter, stream, bulk, nodeId }) => {
+    const res = await k8sClient.getNodeInfo({ peerId, id: nodeId })
+    const nodes = []
+    if (bulk) {
+      const nodeNumber = Math.round(bulk * res.length)
+      shuffle(res)
+      nodes.push(...res.slice(0, nodeNumber))
+    } else {
+      nodes.push(getRandomElement(res))
     }
-    const toxic = await toxiproxyClient.createToxic(node.hosts.toxiproxyAPI, payload)
-    console.log({ name: node.name, id: node.id })
-    console.log(toxic)
+    for (const node of nodes) {
+      const payload = {
+        type: 'latency',
+        stream,
+        toxicity,
+        attributes: {
+          latency,
+          jitter
+        }
+      }
+      const toxic = await toxiproxyClient.createToxic(node.hosts.toxiproxyAPI, payload)
+      console.log('Created Toxic:')
+      console.log({ name: node.name, id: node.id })
+      console.log(toxic)
+    }
   }
 }
 

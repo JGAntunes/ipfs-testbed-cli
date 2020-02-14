@@ -53,10 +53,14 @@ const cmd = {
           jitter
         }
       }
-      const toxic = await toxiproxyClient.createToxic(node.hosts.toxiproxyAPI, payload)
-      console.log('Created Toxic:')
-      console.log({ name: node.name, id: node.id })
-      console.log(toxic)
+      try {
+        const toxic = await toxiproxyClient.createToxic(node.hosts.toxiproxyAPI, payload)
+        console.log('Created Toxic:')
+        console.log({ name: node.name, id: node.id })
+        console.log(toxic)
+      } catch (e) {
+        console.log('Error: ', e)
+      }
     }
   }
 }
